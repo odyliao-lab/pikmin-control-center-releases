@@ -86,6 +86,7 @@ def main():
         apk = Path(stage) / 'release.apk'
         apk.write_bytes(payload)
         cert = subprocess.check_output([str(signers[-1]), 'verify', '--print-certs', str(apk)], text=True)
+        print(cert)  # Public certificate fingerprints, never a private signing key.
         assert 'Signer #1 certificate SHA-256 digest: ' + CERT in cert, 'Wrong signing identity'
         badging = subprocess.check_output([str(signers[-1].parent / 'aapt2'), 'dump', 'badging', str(apk)], text=True)
         assert f"package: name='dev.ody.pikmincontrol' versionCode='{info['versionCode']}' versionName='{info['versionName']}'" in badging
