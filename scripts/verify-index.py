@@ -74,7 +74,13 @@ def main():
     assert release.get('immutable') or (int(info['versionCode']), info['sha256']) == LEGACY, 'New releases must be immutable'
     assets = {item['name']: item for item in release['assets']}
     expected = f'pikmin-control-center-{info["versionName"]}.apk'
+    allowed_assets = {expected, 'update.properties', 'sha256sums.txt'}
+    if release.get('immutable'):
+        allowed_assets.add('build-provenance.json')
+    assert set(assets) == allowed_assets, 'Unexpected public release asset'
     assert assets[expected]['size'] == int(info['size'])
+    checksum = fetch(assets['sha256sums.txt']['browser_download_url'], 4096).decode('utf-8').split()
+    assert checksum == [info['sha256'], expected], 'Checksum attachment mismatch'
     asset_index = parse(fetch(assets['update.properties']['browser_download_url'], 8192).decode('utf-8'))
     assert asset_index == info, 'Index differs from release attachment'
     payload = fetch(info['apkUrl'], int(info['size']))
@@ -86,8 +92,8 @@ def main():
         apk = Path(stage) / 'release.apk'
         apk.write_bytes(payload)
         cert = subprocess.check_output([str(signers[-1]), 'verify', '--print-certs', str(apk)], text=True)
-        print(cert)  # Public certificate fingerprints, never a private signing key.
-        assert 'Signer #1 certificate SHA-256 digest: ' + CERT in cert, 'Wrong signing identity'
+        fingerprints = re.findall(r'certificate SHA-256 digest: ([a-f0-9]{64})', cert)
+        assert fingerprints and set(fingerprints) == {CERT}, 'Wrong signing identity'
         badging = subprocess.check_output([str(signers[-1].parent / 'aapt2'), 'dump', 'badging', str(apk)], text=True)
         assert f"package: name='dev.ody.pikmincontrol' versionCode='{info['versionCode']}' versionName='{info['versionName']}'" in badging
     if release.get('immutable'):
