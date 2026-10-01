@@ -1,34 +1,29 @@
 # Pikmin Control Center
 
-作者：Ody Liao。此公開庫僅提供 Control Center 的簽章 APK、版本資訊與更新說明；不包含私人原始碼、簽章私鑰、GPS 清單或裝置紀錄。
+作者：Ody Liao。此公開庫提供正式簽章APK、更新索引與版本說明，不公開產品原始碼、簽章私鑰、私人GPS清單或裝置紀錄。
 
 ## 下載與更新
 
-[下載最新版 APK](https://github.com/odyliao-lab/pikmin-control-center-releases/releases/latest)
+[下載最新版](https://github.com/odyliao-lab/pikmin-control-center-releases/releases/latest)。目前版本以Releases與`update.properties`為準，各版已驗／待驗範圍見Release說明，不表示所有功能全面穩定。
 
-0.8.0 起：「系統 → 版本更新」可檢查、下載並交由 Android 確認安裝。自動檢查預設開啟，可自行關閉；開啟 App 時最多每日一次，不會自動下載或靜默安裝。舊版本請先從 Releases 手動下載並覆蓋安裝一次。
+在控制中心「系統 → 版本更新」檢查、下載，再由Android確認安裝。自動檢查預設開啟，可自行關閉；不靜默安裝。同套件、同簽章的正常升級保留設定與紀錄，若簽章不符請勿直接移除安裝，先備份並核對來源。工作或停止清理未完成時會阻擋更新。
 
-目前發布版本以 `update.properties` 與 Releases 為準。部分版本依使用者決定先行發布，新增功能仍待實機驗收，請參閱各版 Release 說明；不代表已全面穩定。
+## 環境與核心
 
-同套件、同簽章的正常升級會保留設定和紀錄。若出現簽章不符，請勿直接解除安裝，先備份並確認來源。批次／花田工作及停止清理未完成時，不允許安裝更新。
+- APK最低Android9，主要裝置驗證為已root的Android14／arm64／Magisk／Zygisk。
+- 遊戲相關功能目前只支援Pikmin Bloom **153.0**，不是任意遊戲版本。0.15.20配對統一核心**1.5.33/code101**，包含原生自動化及GPS Copy。
+- APK內附配對核心；可在系統頁安裝，但仍需Root／Magisk權限、重開手機，開遊戲後核對同PID載入。只安裝APK不代表核心已更新或功能已驗收。
+- GPS移動依賴獨立安裝並設定的相容GPS JoyStick；不包含第三方安裝檔。沿路採果先要求定位服務已啟動，結束不關閉JoyStick服務。
+- 功能包括原生派遣／領取、育苗、批次／花田採果、餵食／收花瓣與實驗Health Connect步數工具。步數寫入成功不等同遊戲採計。
 
-## 適用範圍
+## 發布安全與隱私
 
-- Android 9 以上；目前主要驗證環境為已 root 的 Android 14。
-- 遊戲相關功能需要相容的 Pikmin Bloom v152、Magisk／Zygisk 與獨立 native module。5 分鐘不限距離派遣需 native 1.4.23 以上；育苗手動恢復需 native 1.4.24 並另行安裝、重開載入。安裝本 APK 不會自動安裝或升級上述環境。
-- 支援精華、附近派遣、返程領取、育苗、批次探險與花田採果控制；GPS 飛行仍需另行設定相容的 GPS JoyStick。
-- APK 仍含既有 GPS Copy 相容資產，但本更新機制只更新 Control Center，不安裝／啟停 Magisk module；並非任意 Android／遊戲版本都已驗證。
+更新只讀公開索引、下載GitHub資產；App不向此倉庫上傳遊戲帳號、座標或裝置紀錄，GitHub仍接收一般連線資訊（例如IP）。
 
-## 隱私與驗證
-
-檢查更新只讀取本庫公開版本資料；下載只存取 GitHub 發布資產。App 不上傳遊戲帳號、座標、裝置識別碼或操作紀錄。GitHub 作為連線服務仍會接收一般網路請求資訊，例如 IP 位址。
-
-每個版本提供 SHA-256 檔案校驗值。APK 簽章憑證 SHA-256：
+APK簽章憑證SHA-256：
 
 `9080c5d8c9a138a3a8eb42ec65755cf2abd64b881a7bf398feabe3547b934a7e`
 
-版本依 `versionCode` 遞增判斷，不以版本文字排序；不提供自動降版。同一發布版本不替換 APK，修正另發新版。
+版本依`versionCode`遞增，不自動降版、不替換同版APK。新版使用不可變更Release，附件含APK雜湊、版本說明及`build-provenance.json`（來源提交／依賴／CI識別，不含原始碼或金鑰）。更新索引經PR及`release-index`檢查通過才合併，檢查匿名下載雜湊、簽章與版本遞增。此庫僅保留必要的無機密發布驗證腳本／workflow。
 
-後續版本採不可變更的 Release；附件包含建置來源提交、依賴版本、CI 識別及 APK 雜湊（`build-provenance.json`），不包含原始碼或金鑰。更新索引經 PR 與 `release-index` 檢查通過後才合併：檢查版本遞增、發布附件一致、匿名下載雜湊與 APK 簽章。此公開库保留少量無機密的發布驗證腳本／workflow，不提供 APK 的私人原始碼。既有 0.10.1 屬啟用不可變更功能前的歷史版本，驗證器只允許其確定的原始雜湊。
-
-非官方 fan-made 工具，與遊戲權利人無隸屬關係。介面插圖為 AI 生成的同人裝飾，角色及相關商標屬各自權利人；不宣稱擁有角色權利。使用輔助工具可能違反遊戲服務條款，請自行評估使用風險。
+非官方fan-made工具。Root、模擬定位、自動化或人工健康資料可能違反相關服務條款，請自行評估帳號與裝置風險。角色與商標屬各權利人，介面AI插圖不表示官方隸屬或角色權利。
