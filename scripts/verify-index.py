@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
+import zipfile
 
 REPO = 'odyliao-lab/pikmin-control-center-releases'
 LEGACY = (49, '24af6067f636f895f23c5661246f178ce7640438c23d3c3a6538a5c1a208f0c1')
@@ -45,6 +46,30 @@ def fetch(url, limit):
         assert len(data) <= limit, 'Response exceeds limit'
         return data
 
+def validate_paired_core(apk, info, assets, extra, checksums):
+    if not extra:
+        return
+    with zipfile.ZipFile(apk) as archive:
+        metadata = archive.getinfo('assets/core.properties')
+        assert metadata.file_size <= 4096, 'Paired core metadata exceeds limit'
+        pair = dict(line.split('=', 1) for line in archive.read(metadata).decode('ascii').splitlines())
+        assert pair['schema'] == '2' and pair['app'] == info['versionCode'], 'Invalid APK/core pairing'
+        assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', pair['version']), 'Invalid core version'
+        assert re.fullmatch(r'[a-f0-9]{64}', pair['sha256']), 'Invalid core hash'
+        assert re.fullmatch(r'[0-9]+', pair['size']), 'Invalid core size'
+        size = int(pair['size'])
+        entry = archive.getinfo('assets/pikmin-core.zip')
+        assert 0 < size <= 16777216 and entry.file_size == size, 'Invalid embedded core size'
+        embedded = archive.read(entry)
+        assert hashlib.sha256(embedded).hexdigest() == pair['sha256'], 'Embedded core hash mismatch'
+    name = f"pikmin-core-{pair['version']}.zip"
+    assert extra == {name}, 'Unexpected public release asset'
+    assert checksums == [pair['sha256'], name], 'Paired core checksum mismatch'
+    url = f"https://github.com/{REPO}/releases/download/v{info['versionName']}/{name}"
+    assert assets[name]['size'] == size and assets[name]['browser_download_url'] == url
+    assert fetch(url, size) == embedded, 'Downloaded core differs from the signed APK'
+
+
 def main():
     raw = Path('update.properties').read_text(encoding='utf-8')
     info = parse(raw)
@@ -77,10 +102,13 @@ def main():
     allowed_assets = {expected, 'update.properties', 'sha256sums.txt'}
     if release.get('immutable'):
         allowed_assets.add('build-provenance.json')
-    assert set(assets) == allowed_assets, 'Unexpected public release asset'
+    extra_assets = set(assets) - allowed_assets
+    assert allowed_assets <= set(assets), 'Missing required public release asset'
+    assert not extra_assets or (release.get('immutable') and len(extra_assets) == 1), 'Unexpected public release asset'
     assert assets[expected]['size'] == int(info['size'])
     checksum = fetch(assets['sha256sums.txt']['browser_download_url'], 4096).decode('utf-8').split()
-    assert checksum == [info['sha256'], expected], 'Checksum attachment mismatch'
+    checksum_fields = 4 if extra_assets else 2
+    assert len(checksum) == checksum_fields and checksum[:2] == [info['sha256'], expected], 'Checksum attachment mismatch'
     asset_index = parse(fetch(assets['update.properties']['browser_download_url'], 8192).decode('utf-8'))
     assert asset_index == info, 'Index differs from release attachment'
     payload = fetch(info['apkUrl'], int(info['size']))
@@ -96,6 +124,7 @@ def main():
         assert fingerprints and set(fingerprints) == {CERT}, 'Wrong signing identity'
         badging = subprocess.check_output([str(signers[-1].parent / 'aapt2'), 'dump', 'badging', str(apk)], text=True)
         assert f"package: name='dev.ody.pikmincontrol' versionCode='{info['versionCode']}' versionName='{info['versionName']}'" in badging
+        validate_paired_core(apk, info, assets, extra_assets, checksum[2:])
     if release.get('immutable'):
         provenance = json.loads(fetch(assets['build-provenance.json']['browser_download_url'], 32768))
         assert provenance['apkSha256'] == info['sha256'] and provenance['versionCode'] == int(info['versionCode'])
